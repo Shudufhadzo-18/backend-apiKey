@@ -39,6 +39,7 @@ export const handler = async (event) => {
 
     const data = await response.json();
     const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "No valid output";
+    console.log("Gemini raw response:", JSON.stringify(data, null, 2));
 
     return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ message: aiText }) };
   } catch (err) {
