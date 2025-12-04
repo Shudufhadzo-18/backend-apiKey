@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -8,7 +6,6 @@ const corsHeaders = {
 
 export const handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
-    // Handle preflight
     return { statusCode: 204, headers: corsHeaders, body: "" };
   }
 
@@ -19,6 +16,11 @@ export const handler = async (event) => {
   try {
     const { message, about } = JSON.parse(event.body);
 
+    if (!process.env.GEMINI_KEY) {
+      return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: "GEMINI_KEY not set" }) };
+    }
+
+    // Use Node 18+ built-in fetch (no import)
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_KEY}`,
       {
@@ -36,20 +38,11 @@ export const handler = async (event) => {
     );
 
     const data = await response.json();
+    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "No valid output";
 
-    const aiText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "No valid output";
-
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: JSON.stringify({ message: aiText })
-    };
+    return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ message: aiText }) };
   } catch (err) {
-    return {
-      statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: err.message })
-    };
+    console.error("Function error:", err);
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: err.message }) };
   }
 };
